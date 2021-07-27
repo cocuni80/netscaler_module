@@ -11,7 +11,7 @@ setuptools.setup(
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license='MIT',
-    description='A Python package to query Netscaler Information',
+    description='A Python package REST API Netscaler Information',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cocuni80/netscaler_module",
