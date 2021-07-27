@@ -16,10 +16,8 @@ from netscaler_module import nitro
 
 ....
 ```
-
-Both the `threaded` decorator and `run_threaded` method will return an instance of
-`ResultThread`. This allow you to optionally wait for the function to finish executing 
-and get the return value. To get the return value, use `.await_output()`
+Create a `DATABASE` variable and append the dicts response from nitro class.
+Below an example.
 ```python
 
 def get_ns(**kwargs):
