@@ -3,7 +3,9 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-INSTALL_REQUIRES = ['requests']
+INSTALL_REQUIRES = ['requests',
+                    'nitro-python',
+                    ]
 
 setuptools.setup(
     name="netscaler_module",
