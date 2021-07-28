@@ -7,15 +7,15 @@ INSTALL_REQUIRES = ['requests']
 
 setuptools.setup(
     name="netscaler_module",
-    version="0.1",
+    version="1.0",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license='MIT',
-    description='A Python package REST API Netscaler Information',
+    description='A Python package to get REST API Netscaler Information',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cocuni80/netscaler_module",
-    packages=['module'],
+    packages=setuptools.find_packages(),
     install_requires=INSTALL_REQUIRES,
     classifiers=[
         "Programming Language :: Python :: 3",
