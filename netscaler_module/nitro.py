@@ -10,6 +10,22 @@ from nssrc.com.citrix.netscaler.nitro.resource.stat.ha.hanode_stats import hanod
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def filter_json(source, fields):
+    """
+    Function that can filter a Dict
+    """
+    return list(
+        map(
+            lambda x: dict(
+                filter(
+                    lambda y: y[0] in fields,
+                    x.items()
+                )
+            ),
+            source
+        )
+    )
+
 
 class NitroClass(object):
     """
