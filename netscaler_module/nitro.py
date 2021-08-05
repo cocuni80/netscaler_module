@@ -203,6 +203,9 @@ class NitroClass(object):
             if self.switch(ns_partition):
                 output.extend(self.get_lbvservers_binding())
         return output
+    
+    def get_backup(self):
+        return True
 
     @property
     def master(self):
