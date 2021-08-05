@@ -204,8 +204,8 @@ class NitroClass(object):
                 output.extend(self.get_lbvservers_binding())
         return output
     
-    def get_backup(self):
-        return True
+    def get_backup(self, **kwargs):
+        return kwargs
 
     @property
     def master(self):
