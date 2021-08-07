@@ -3,13 +3,13 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-INSTALL_REQUIRES = ['requests',
-                    'nitro-python',
+INSTALL_REQUIRES = ['nitro-python',
+                    'paramiko'
                     ]
 
 setuptools.setup(
     name="netscaler_module",
-    version="1.1",
+    version="1.2",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license='MIT',
