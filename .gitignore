@@ -6,6 +6,11 @@ __pycache__/
 # Testing
 sample/
 
+# Output
+repo/
+backup/
+backups/
+
 # C extensions
 *.so
 
