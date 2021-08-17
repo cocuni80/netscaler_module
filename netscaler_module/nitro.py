@@ -1,5 +1,6 @@
 import urllib3
 import json
+from datetime import datetime
 
 from paramiko import Transport, SFTPClient
 from pathlib import Path
@@ -64,8 +65,8 @@ class NitroClass(object):
         """
         Initialise a NitroClass
         """
-        self._hostname = kwargs.get('hostname', None)
         self._ip = kwargs.get('ip', None)
+        self._hostname = kwargs.get('hostname', self._ip)
         self._username = kwargs.get('username', None)
         self._password = kwargs.get('password', None)
         self._session = None
@@ -74,7 +75,7 @@ class NitroClass(object):
         self._partition = 'default'
         self._partitions = ['default']
         self._state = None
-        self._backup_name = kwargs.get('backup_name', 'backup_' + self._ip)
+        self._backup_name = None
         self._backup_folder = kwargs.get('backup_folder', 'backups')
         self._backup_level = kwargs.get('backup_level', 'basic')
         self._root = str((Path(__file__).parent.absolute() / "..").resolve())
@@ -240,9 +241,9 @@ class NitroClass(object):
     def create_backup(self, **kwargs):
         """
         Function to create a backup on Netscaler.
-        Default input parameters:
+        Input parameters:
         - backup_name: backup_ipaddr
-        - backup_level: basic
+        - backup_level: basic | full
         Output: Boolean
         """
         if not self._session:
@@ -250,7 +251,7 @@ class NitroClass(object):
             return False
         try:
             resource = systembackup()
-            self._backup_name = kwargs.get('backup_name', self._backup_name)
+            self._backup_name = kwargs.get('backup_name', self._hostname + datetime.now().strftime("%m.%d.%Y_%H.%M%p"))
             self._backup_level = kwargs.get('backup_level', self._backup_level)
             resource.filename = self._backup_name
             resource.level = self._backup_level
