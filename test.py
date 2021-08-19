@@ -16,12 +16,13 @@ def get_ns_vservers(**kwargs):
 def get_ns_backup(**kwargs):
     ns = NitroClass(**kwargs)
     ns.login()
+    ns.create_backup()
+    ns.download_backup()
     if ns.master:
-       ns.create_backup()
+       ns.delete_backup()
     else:
         print('NS: {}, is not master'.format(ns.ip))
-    ns.download_backup(local_name=ns.ip)
-    ns.delete_backup()
+        ns.delete_all_backups()
     ns.logout()
     return None
 
@@ -38,12 +39,11 @@ if __name__ == '__main__':
         'conexion': 'HTTP'
     }
     backup = {
-        'backup_name': 'daily_backup',
         'backup_folder': 'repo',
         'backup_level': 'full',
     }
     for hostname, ip in ns_pool.items():
         ns_properties = {'hostname': hostname, 'ip': ip} | password | backup
-        get_ns_backup(**ns_properties)
+        get_ns_backup(**ns_properties)        
     
     print(DATABASE)

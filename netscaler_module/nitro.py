@@ -75,7 +75,7 @@ class NitroClass(object):
         self._partition = 'default'
         self._partitions = ['default']
         self._state = None
-        self._backup_name = None
+        self._backup_name = kwargs.get('backup_name', None)
         self._backup_folder = kwargs.get('backup_folder', 'backups')
         self._backup_level = kwargs.get('backup_level', 'basic')
         self._root = str((Path(__file__).parent.absolute() / "..").resolve())
@@ -241,18 +241,20 @@ class NitroClass(object):
     def create_backup(self, **kwargs):
         """
         Function to create a backup on Netscaler.
-        Input parameters:
-        - backup_name: backup_ipaddr
-        - backup_level: basic | full
-        Output: Boolean
+        - Input:
+            * backup_name: Remote backup name | default: <self._backup_name>
+            * backup_level: Backup level, basic or full | default: <basic>
+        - Output: 
+            * Boolean
         """
         if not self._session:
             print('[ERROR]: Please log into NS')
             return False
-        try:
+        try:            
+            if not self._backup_name:
+                self._backup_name = kwargs.get('backup_name', self._hostname + datetime.now().strftime("_%m.%d.%Y-%H.%M%p"))
+            self._backup_level = kwargs.get('backup_level', self._backup_level)            
             resource = systembackup()
-            self._backup_name = kwargs.get('backup_name', self._hostname + datetime.now().strftime("%m.%d.%Y_%H.%M%p"))
-            self._backup_level = kwargs.get('backup_level', self._backup_level)
             resource.filename = self._backup_name
             resource.level = self._backup_level
             systembackup.create(self._session, resource)
@@ -268,16 +270,17 @@ class NitroClass(object):
     def query_backup(self, **kwargs):
         """
         Function to query a backup from Netscaler.
-        Default input parameters:
-        - remote_name: self._backup_name
-        Output: ResourceClass or False
+        - Input:
+            * backup_name: Remote backup name | default: <self._backup_name>
+        - Output:
+            * ResourceClass or False
         """
         if not self._session:
             print('[ERROR]: Please log into NS')
             return False
         try:
-            remote_backup = "filename:{}.tgz".format(kwargs.get('remote_name', self._backup_name))
-            resource = systembackup.get_filtered(self._session, filter_=remote_backup)
+            backup_name = "filename:{}.tgz".format(kwargs.get('backup_name', self._backup_name))
+            resource = systembackup.get_filtered(self._session, filter_=backup_name)
             #print(resource[0].__dict__)
             print('[LOG]: NS: {}, Backup {} queried'.format(self._ip, resource[0].filename))
             print(json.dumps(resource[0].__dict__, indent=3))
@@ -288,21 +291,45 @@ class NitroClass(object):
         except Exception as e:
             print("[ERROR]: Query Backup, " + str(e.args))
             return False
-    
-    def download_backup(self, **kwargs):
+        
+    def query_all_backups(self):
         """
-        Function to download a backup from Netscaler.
-        Default input parameters:
-        - local_name: self._backup_name
-        - local_folder: self._backup_folder
-        Output: ResourceClass or False
+        Function to query a backup from Netscaler.
+        - Input:
+            * None
+        - Output:
+            * ResourceClass List or False
         """
         if not self._session:
             print('[ERROR]: Please log into NS')
             return False
         try:
-            local_name = kwargs.get('local_name', self._backup_name)
-            folder_path = Path(self._root, kwargs.get('local_folder', self._backup_folder))
+            resources = systembackup.get(self._session)
+            for resource in resources:
+                print('[LOG]: NS: {}, Backup {} queried'.format(self._ip, resource.filename))
+            return resources
+        except nitro_exception as  e:
+                print("[ERROR]: Query Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+                return False
+        except Exception as e:
+            print("[ERROR]: Query Backup, " + str(e.args))
+            return False
+    
+    def download_backup(self, **kwargs):
+        """
+        Function to download a backup from Netscaler.
+        - Input:
+            * backup_name: Local backup name | default: <self._backup_name>
+            * backup_folder: Local folder Name | default: <self._backup_folder>
+        - Output: 
+            * ResourceClass or False
+        """
+        if not self._session:
+            print('[ERROR]: Please log into NS')
+            return False
+        try:
+            local_name = kwargs.get('backup_name', self._backup_name)
+            folder_path = Path(self._root, kwargs.get('backup_folder', self._backup_folder))
             if not folder_path.is_dir():
                 try: 
                     folder_path.mkdir(parents=True, exist_ok=True)
@@ -311,6 +338,7 @@ class NitroClass(object):
                     print("[ERROR]: Unable to create folder {}, ".format(folder_path) + str(e.args))
             
             local_file = Path(folder_path, local_name + '.tgz')
+            print('[LOG]: NS: {}, Downloading backup {}'.format(self._ip, local_file))
             #remote_file = r'/var/ns_sys_backup/{}.tgz'.format(name)
             remote_file = '{}.tgz'.format(self._backup_name)           
             
@@ -330,20 +358,48 @@ class NitroClass(object):
     
     def delete_backup(self, **kwargs):
         """
-        Function to query a backup from Netscaler.
-        Default input parameters:
-        - remote_name: self._backup_name
-        Output: Boolean
+        Function to delete a backup from Netscaler.
+        - Input:
+            * backup_name: Remote backup name | default: <self._backup_name>
+        - Output: 
+            * Boolean
+        """
+        if not self._session:
+            print('[ERROR]: Please log into NS')
+            return False
+        try:            
+            remote_name = "filename:{}.tgz".format(kwargs.get('backup_name', self._backup_name))
+            resource = systembackup.get_filtered(self._session, filter_=remote_name)            
+            if resource:
+                print('[LOG]: NS: {}, Backup {} deleted'.format(self._ip, self._backup_name))          
+                systembackup.delete(self._session, resource)
+                return True
+            else:
+                return False
+        except nitro_exception as  e:
+                print("[ERROR]: Delete Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+                return False
+        except Exception as e:
+            print("[ERROR]: Delete Backup, " + str(e.args))
+            return False
+    
+    def delete_all_backups(self):
+        """
+        Function to delete all backups from Netscaler.
+        - Input:
+            * None
+        - Output: 
+            * Boolean
         """
         if not self._session:
             print('[ERROR]: Please log into NS')
             return False
         try:
-            remote_name = kwargs.get('remote_name', self._backup_name)
-            resource = self.query_backup(remote_name=remote_name)
-            if resource:
-                print('[LOG]: NS: {}, Backup {} deleted'.format(self._ip, self._backup_name))          
-                systembackup.delete(self._session, resource)
+            resources = systembackup.get(self._session)
+            if resources:
+                for resource in resources:
+                    print('[LOG]: NS: {}, Backup {} deleted'.format(self._ip, resource.filename))          
+                systembackup.delete(self._session, resources)
                 return True
             else:
                 return False
