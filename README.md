@@ -20,32 +20,45 @@ Create a `DATABASE` variable and append the dicts response from nitro class.
 Below an example.
 ```python
 
-def get_ns(**kwargs):
-    global DATABASE
-    ns = NitroClass(**kwargs)
-    ns.login()
-    if ns.master:
-        data = ns.get_lbvservers_binding_partitions()
-        DATABASE.extend(data)        
-    else:
-        print('NS: {}, is not master'.format(ns.ip))
-    ns.logout()
-    return None
-
 DATABASE = list()
 
 if __name__ == '__main__':
+    global DATABASE
+    
     ns_pool = [
-        '192.168.1.1',
-        '192.168.1.2',
+        {            
+            'ip': '192.168.2.100',
+            'hostname': 'ns1',
+            'backup_name': 'ns1',
+        },
+        {            
+            'ip': '192.168.2.101',
+            'hostname': 'ns2',
+            'backup_name': 'ns2',
+        }
     ]
     password = {
         'username': 'nsroot',
         'password': 'XXXXXXX'
     }
-    for ns_ip in ns_pool:
-        temp = {'ip': ns_ip} | password
-        get_ns(**temp)
-    
+    backup = {        
+        'backup_folder': 'repo',
+        'backup_level': 'full',
+    }
+
+    for ns_item in ns_pool:        
+        kwargs = ns_item | password | backup
+        ns = NitroClass(**kwargs)
+        ns.login()
+
+        if ns.master:
+            data = ns.get_lbvservers_binding_partitions()
+            DATABASE.extend(data)
+        
+        ns.create_backup()
+        ns.download_backup()
+        ns.delete_backup()
+        ns.logout()
+        
     print(DATABASE)
 ```
