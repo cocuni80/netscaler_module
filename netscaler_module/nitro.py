@@ -78,7 +78,8 @@ class NitroClass(object):
         self._backup_name = kwargs.get('backup_name', None)
         self._backup_folder = kwargs.get('backup_folder', 'backups')
         self._backup_level = kwargs.get('backup_level', 'basic')
-        self._root = str((Path(__file__).parent.absolute() / "..").resolve())
+        #self._root = str((Path(__file__).parent.absolute() / "..").resolve())
+        self._root = str((Path().absolute()))
 
     def login(self):
         """
