@@ -54,6 +54,88 @@ def filter_json(source, fields):
             source
         )
     )
+    
+    
+class NitroError(Exception):
+    """
+        NitroError class manage the exceptions for Nitro class
+    """
+    def __init__(self, *args, **kwargs):
+        self._username = kwargs.get('username', None)
+        self._ip = kwargs.get('ip', None)
+        self._hostname = kwargs.get('hostname', None)
+        self._partition = kwargs.get('partition', None)        
+        self._backup_folder = kwargs.get('backup_folder', None)
+        self._backup_name = kwargs.get('backup_name', None)
+        self._backup_level = kwargs.get('backup_level', None)
+        self._title = kwargs.get('title', None)
+        self._message = kwargs.get('message', None)
+
+    def __str__(self):
+        """
+        Str for NitroError class
+        """
+        output = '[Error] - '
+        if self._title:
+            output += '{}, '.format(self._title)
+        if self._ip:
+            output += 'ip: {}, '.format(self._ip)
+        if self._hostname:
+            output += 'Hostmame: {}, '.format(self._hostname)
+        if self._username:
+            output += 'Username: {}, '.format(self._username)
+        if self._partition:
+            output += 'Partition: {}, '.format(self._partition)        
+        if self._backup_folder:
+            output += 'Backup Folder: {}, '.format(self._backup_folder)
+        if self._backup_name:
+            output += 'Backup Name: {}, '.format(self._backup_name)
+        if self._backup_level:
+            output += 'Backup Level: {}, '.format(self._backup_level)
+        if self._message:
+            output += 'Message: {}'.format(self._message)
+        return output
+
+
+class NitroDebug(object):
+    """
+        NitroDebug class manage the debugs for Nitro class
+    """
+    def __init__(self, *args, **kwargs):
+        self._username = kwargs.get('username', None)
+        self._ip = kwargs.get('ip', None)
+        self._hostname = kwargs.get('hostname', None)
+        self._partition = kwargs.get('partition', None)        
+        self._backup_folder = kwargs.get('backup_folder', None)
+        self._backup_name = kwargs.get('backup_name', None)
+        self._backup_level = kwargs.get('backup_level', None)
+        self._title = kwargs.get('title', None)
+        self._message = kwargs.get('message', None)
+
+    def __str__(self):
+        """
+        Str for NitroDebug class
+        """
+        output = '[Debug] - '
+        if self._title:
+            output += '{}, '.format(self._title)
+        if self._ip:
+            output += 'ip: {}, '.format(self._ip)
+        if self._hostname:
+            output += 'Hostmame: {}, '.format(self._hostname)
+        if self._username:
+            output += 'Username: {}, '.format(self._username)
+        if self._partition:
+            output += 'Partition: {}, '.format(self._partition)        
+        if self._backup_folder:
+            output += 'Backup Folder: {}, '.format(self._backup_folder)
+        if self._backup_name:
+            output += 'Backup Name: {}, '.format(self._backup_name)
+        if self._backup_level:
+            output += 'Backup Level: {}, '.format(self._backup_level)
+        if self._message:
+            output += 'Message: {}'.format(self._message)
+        return output
 
 
 class NitroClass(object):
@@ -78,8 +160,8 @@ class NitroClass(object):
         self._backup_name = kwargs.get('backup_name', None)
         self._backup_folder = kwargs.get('backup_folder', 'backups')
         self._backup_level = kwargs.get('backup_level', 'basic')
-        #self._root = str((Path(__file__).parent.absolute() / "..").resolve())
         self._root = str((Path().absolute()))
+        #self._root = str((Path(__file__).parent.absolute() / "..").resolve())        
 
     def login(self):
         """
@@ -93,31 +175,50 @@ class NitroClass(object):
             self._session.skipinvalidarg = True
             self._session.idempotent = True
             self._session.login()
-            print('[DEBUG]: Logged into NS: {}'.format(self._ip))
+            print(NitroDebug(title='Logged to Netscaler', 
+                             ip=self._ip, hostname=self._hostname, username=self._username))
             return True
-        except nitro_exception as  e:
-            print("[ERROR]: Netscaler Login, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+        except nitro_exception as e:
+            self._session = None
+            print(NitroError(title='Unable login', ip=self._ip, hostname=self._hostname, message=e.message))
             return False
         except Exception as e:
-            print("[ERROR]: Netscaler Login, " + str(e.args))
+            self._session = None
+            print(NitroError(title='Unable login', ip=self._ip, hostname=self._hostname, message=e))
+            return False
+    
+    @property
+    def exist_session(self):
+        if self._session:
+            return True
+        else:
+            print(NitroError(title='No logged into Netscaler', 
+                             ip=self._ip, hostname=self._hostname, username=self._username))
             return False
     
     def logout(self):
         """
         Logout function to quit from NetScaler
         """
-        if not self._session:
+        if not self.exist_session:
             return False
-        self._session.logout()
-        print('[DEBUG]: Logout from NS: {}'.format(self._ip))
-        return True        
+        try:
+            self._session.logout()
+            self._session = None
+            print(NitroDebug(title='Logout Done', ip=self._ip))
+            return True
+        except nitro_exception as e:
+            print(NitroError(title='Unable logout', ip=self._ip, hostname=self._hostname, message=e.message))
+            return False
+        except Exception as e:
+            print(NitroError(title='Unable logout', ip=self._ip, hostname=self._hostname, message=e))
+            return False
     
     def switch(self, partition_name):
         """
         Function that conmutes through partition in Netscaler
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             if not partition_name == 'default':
@@ -125,21 +226,23 @@ class NitroClass(object):
                 resource.partitionname = partition_name
                 nspartition.Switch(self._session, resource)
                 self._partition = partition_name
-                print('[LOG]: NS: {}, Switching to partition: {}'.format(self._ip, partition_name))
+                print(NitroDebug(title='Switch partition done', 
+                                 ip=self._ip, hostname=self._hostname, partition=self._partition))
             return True
-        except nitro_exception as e :
-            print("[ERROR]: Switch Partition, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+        except nitro_exception as e:
+            print(NitroError(title='Unable to switch partition', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e.message))
             return False
-        except Exception as e :  
-            print("[ERROR]: Switch Partition, " + str(e.args))
+        except Exception as e:
+            print(NitroError(title='Unable to switch partition', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e))
             return False
 
     def get_lbservers(self):
         """
         Function to get LB information from current partition
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             output = list()
@@ -162,10 +265,12 @@ class NitroClass(object):
                 output.append(temp)
             return output
         except nitro_exception as e:
-            print("[ERROR]: Get LB vservers, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+            print(NitroError(title='Unable to get LB vservers', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e.message))
             return []
         except Exception as e:
-            print("[ERROR]: Get LB vservers, " + str(e.args))
+            print(NitroError(title='Unable to get LB vservers', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e))
             return []
     
     def get_lbvserver_binding(self, lbvserver_name):
@@ -173,8 +278,7 @@ class NitroClass(object):
         Function to get vServers Service and Servicegroup members 
         information from a LBvServer
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             output = dict()
@@ -189,19 +293,20 @@ class NitroClass(object):
                 return None
             return output
         except nitro_exception as e:
-            print("[ERROR]: Get Vservers Bindings, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-            return None
+            print(NitroError(title='Unable to get vservers bindings', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e.message))
+            return []
         except Exception as e:
-            print("[ERROR]: Get Vservers Bindings, " + str(e.args))
-            return None
+            print(NitroError(title='Unable to get vservers bindings', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e))
+            return []
 
     def get_lbvservers_binding(self):
         """
         Function to get vServers Service and Servicegroup members 
         information from a Partition
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         print('[LOG]: NS: {}, Getting LB Vserver Bindings from : {}'.format(self._ip, self._partition))
         output = list()
@@ -217,7 +322,9 @@ class NitroClass(object):
                             temp.update(ns_vserver)
                             output.append(temp)
                         except Exception as e:
-                            print("[ERROR]: " + str(e.args))
+                            #print("[ERROR]: " + str(e.args))
+                            print(NitroError(title='Unable to append service group', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e))
                 elif 'service_binding' in ns_vservers:
                     for ns_vserver in ns_vservers['service_binding']:
                         try:
@@ -225,7 +332,9 @@ class NitroClass(object):
                             temp.update(ns_vserver)
                             output.append(temp)
                         except Exception as e:
-                            print("[ERROR]: " + str(e.args))
+                            #print("[ERROR]: " + str(e.args))
+                            print(NitroError(title='Unable to append service', 
+                             ip=self._ip, hostname=self._hostname, partition=self._partition, message=e))
         return output
 
     def get_lbvservers_binding_partitions(self):
@@ -233,6 +342,8 @@ class NitroClass(object):
         Function to get vServers Service and Servicegroup members 
         information from Netscaler
         """
+        if not self.exist_session:
+            return False
         output = list()
         for ns_partition in self.partitions:
             if self.switch(ns_partition):
@@ -248,8 +359,7 @@ class NitroClass(object):
         - Output: 
             * Boolean
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:            
             if not self._backup_name:
@@ -261,11 +371,13 @@ class NitroClass(object):
             systembackup.create(self._session, resource)
             print('[LOG]: NS: {}, Backup {} created'.format(self._ip, self._backup_name))
             return True
-        except nitro_exception as  e:
-                print("[ERROR]: Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to create backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=self._backup_name, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Backup, " + str(e.args))
+            print(NitroError(title='Unable to create backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=self._backup_name, message=e))
             return False
     
     def query_backup(self, **kwargs):
@@ -276,8 +388,7 @@ class NitroClass(object):
         - Output:
             * ResourceClass or False
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             backup_name = "filename:{}.tgz".format(kwargs.get('backup_name', self._backup_name))
@@ -286,11 +397,13 @@ class NitroClass(object):
             print('[LOG]: NS: {}, Backup {} queried'.format(self._ip, resource[0].filename))
             print(json.dumps(resource[0].__dict__, indent=3))
             return resource
-        except nitro_exception as  e:
-                print("[ERROR]: Query Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to query backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=backup_name, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Query Backup, " + str(e.args))
+            print(NitroError(title='Unable to query backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=backup_name, message=e))
             return False
         
     def query_all_backups(self):
@@ -301,19 +414,20 @@ class NitroClass(object):
         - Output:
             * ResourceClass List or False
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             resources = systembackup.get(self._session)
             for resource in resources:
                 print('[LOG]: NS: {}, Backup {} queried'.format(self._ip, resource.filename))
             return resources
-        except nitro_exception as  e:
-                print("[ERROR]: Query Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to query all backups', 
+                             ip=self._ip, hostname=self._hostname, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Query Backup, " + str(e.args))
+            print(NitroError(title='Unable to query all backups', 
+                             ip=self._ip, hostname=self._hostname, message=e))
             return False
     
     def download_backup(self, **kwargs):
@@ -325,8 +439,7 @@ class NitroClass(object):
         - Output: 
             * ResourceClass or False
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             local_name = kwargs.get('backup_name', self._backup_name)
@@ -350,11 +463,13 @@ class NitroClass(object):
             sftp.get(remote_file, local_file)
             t.close()
             return True
-        except nitro_exception as  e:
-                print("[ERROR]: Download Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to download backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=local_name, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Download Backup, " + str(e.args))
+            print(NitroError(title='Unable to download backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=local_name, message=e))
             return False
     
     def delete_backup(self, **kwargs):
@@ -365,8 +480,7 @@ class NitroClass(object):
         - Output: 
             * Boolean
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:            
             remote_name = "filename:{}.tgz".format(kwargs.get('backup_name', self._backup_name))
@@ -377,11 +491,13 @@ class NitroClass(object):
                 return True
             else:
                 return False
-        except nitro_exception as  e:
-                print("[ERROR]: Delete Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to delete backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=remote_name, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Delete Backup, " + str(e.args))
+            print(NitroError(title='Unable to delete backup', 
+                             ip=self._ip, hostname=self._hostname, backup_name=remote_name, message=e))
             return False
     
     def delete_all_backups(self):
@@ -392,8 +508,7 @@ class NitroClass(object):
         - Output: 
             * Boolean
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             resources = systembackup.get(self._session)
@@ -404,11 +519,13 @@ class NitroClass(object):
                 return True
             else:
                 return False
-        except nitro_exception as  e:
-                print("[ERROR]: Delete Backup, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
-                return False
+        except nitro_exception as e:
+            print(NitroError(title='Unable to delete all backups', 
+                             ip=self._ip, hostname=self._hostname, message=e.message))
+            return False
         except Exception as e:
-            print("[ERROR]: Delete Backup, " + str(e.args))
+            print(NitroError(title='Unable to delete all backups', 
+                             ip=self._ip, hostname=self._hostname, message=e))
             return False
 
     @property
@@ -416,8 +533,7 @@ class NitroClass(object):
         """
         Check if NS is master
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             ha = hanode_stats.get(self._session)
@@ -426,11 +542,13 @@ class NitroClass(object):
                 return True
             else:
                 return False
-        except nitro_exception as  e:
-            print("[ERROR]: HA Status, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+        except nitro_exception as e:
+            print(NitroError(title='Unable to get NS status', 
+                             ip=self._ip, hostname=self._hostname, message=e.message))
             return False
         except Exception as e:
-            print("[ERROR]: HA Status, " + str(e.args))
+            print(NitroError(title='Unable to get NS status', 
+                             ip=self._ip, hostname=self._hostname, message=e))
             return False
     
     @property
@@ -526,8 +644,7 @@ class NitroClass(object):
         """
         Return a List with all the partitiion in Netscaler
         """
-        if not self._session:
-            print('[ERROR]: Please log into NS')
+        if not self.exist_session:
             return False
         try:
             ns_partitions = nspartition.get(self._session)
@@ -535,9 +652,12 @@ class NitroClass(object):
                 for ns_partition in ns_partitions:                
                     self._partitions.append(ns_partition.partitionname)
             return self._partitions
-        except nitro_exception as  e:
-            print("[ERROR]: Getting partitions, ErrorCode=" + str(e.errorcode) + ", Message=" + e.message)
+        except nitro_exception as e:
+            print(NitroError(title='Unable to get partitions', 
+                             ip=self._ip, hostname=self._hostname, message=e.message))
             return False
         except Exception as e:
-            print("[ERROR]: Getting partitions, " + str(e.args))
+            print(NitroError(title='Unable to get partitions', 
+                             ip=self._ip, hostname=self._hostname, message=e))
             return False
+        

@@ -21,7 +21,6 @@ def get_ns_backup(**kwargs):
     if ns.master:
        ns.delete_backup()
     else:
-        print('NS: {}, is not master'.format(ns.ip))
         ns.delete_all_backups()
     ns.logout()
     return None
